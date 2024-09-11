@@ -1,0 +1,92 @@
+_schema-version: "3.2"
+ID: nidaproject
+version: 0.0.1
+modules:
+- name: nidaproject-destination-content
+  type: com.sap.application.content
+  requires:
+  - name: nidaproject-destination-service
+    parameters:
+      content-target: true
+  - name: nidaproject_html_repo_host
+    parameters:
+      service-key:
+        name: nidaproject_html_repo_host-key
+  - name: uaa_nidaproject
+    parameters:
+      service-key:
+        name: uaa_nidaproject-key
+  parameters:
+    content:
+      subaccount:
+        destinations:
+        - Name: nidaconfi_nidaproject_html_repo_host
+          ServiceInstanceName: nidaproject-html5-app-host-service
+          ServiceKeyName: nidaproject_html_repo_host-key
+          sap.cloud.service: nidaconfi
+        - Authentication: OAuth2UserTokenExchange
+          Name: nidaconfi_uaa_nidaproject
+          ServiceInstanceName: nidaproject-xsuaa-service
+          ServiceKeyName: uaa_nidaproject-key
+          sap.cloud.service: nidaconfi
+        existing_destinations_policy: ignore
+  build-parameters:
+    no-source: true
+- name: nidaproject-app-content
+  type: com.sap.application.content
+  path: .
+  requires:
+  - name: nidaproject_html_repo_host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: resources
+    requires:
+    - artifacts:
+      - nidaapplicationnidaworkflow.zip
+      name: nidaapplicationnidaworkflow
+      target-path: resources/
+- name: nidaapplicationnidaworkflow
+  type: html5
+  path: nidaworkflow
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: nidaproject-destination-service
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: true
+      init_data:
+        subaccount:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          existing_destinations_policy: update
+      version: 1.0.0
+    service: destination
+    service-name: nidaproject-destination-service
+    service-plan: lite
+- name: nidaproject_html_repo_host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-name: nidaproject-html5-app-host-service
+    service-plan: app-host
+- name: uaa_nidaproject
+  type: org.cloudfoundry.managed-service
+  parameters:
+    path: ./xs-security.json
+    service: xsuaa
+    service-name: nidaproject-xsuaa-service
+    service-plan: application
+parameters:
+  deploy_mode: html5-repo
